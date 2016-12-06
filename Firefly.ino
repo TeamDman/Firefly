@@ -3,7 +3,8 @@
 
 //  HT1632.setPixelFF(x,y);  - remapped pixel coordinates, origin (0,0) at bottom left, x is horizontal, y is vertical - requires library update
 //  HT1632.drawTextFF(disp, OUT_SIZE - i, 2, FONT_8X4, FONT_8X4_END, FONT_8X4_HEIGHT); - works same as prev version but is rotated and remapped
-
+// fix timing problem
+// 38 kHz wave
 #include "pins.h"
 #include "domimg.h"
 
@@ -138,7 +139,11 @@ void loop () {
         HT1632.clear();
         HT1632.drawTextFF(win?"WINNER":"LOSER",16-scroll, 2, FONT_8X4, FONT_8X4_END, FONT_8X4_HEIGHT);
         HT1632.render();
-        delay(100);
+        delay(50);
+        if (machineState!=idle) {
+          machineState=idle;
+          break;
+        }
       }
       blockGameReset();
     } else {
