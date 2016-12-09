@@ -1,14 +1,3 @@
-/*
- Timer Interrupts Example
-
- Demonstrates usage of the HardwareTimer classes by blinking the LED
- 
- Created 22 April 2010, last updated 8 June 2010
- By Bryan Newbold for LeafLabs
- This code is released with no strings attached.
- 
- */
-
 #include <boarddefs.h>
 #include <IRremote.h>
 #include <IRremoteInt.h>
