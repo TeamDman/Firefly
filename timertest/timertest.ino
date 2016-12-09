@@ -9,6 +9,11 @@
  
  */
 
+#include <boarddefs.h>
+#include <IRremote.h>
+#include <IRremoteInt.h>
+#include <ir_Lego_PF_BitStreamEncoder.h>
+
 #include "pins.h"
 #include "domimg.h"
 
@@ -16,69 +21,67 @@
 #include <font_8x4.h>
 #include <images.h>
 
-#define LED_RATE 500000    // in microseconds; should give 0.5Hz toggles
+
+
+#define LED_RATE 50    // in microseconds
 
 void handler_count1(void);
 void handler_count2(void);
 
-int toggle = 0;
+int pincheck = 0;
+IRrecv irrecv(13);
 
-int count1 = 0;
-int count2 = 0;
+void ButtonRight() {
+    pincheck++;
+}
+void ButtonLeft() {
+    pincheck--;
+}
 
 void setup()
 {
 	Serial.begin(115200); // Ignored by Maple. But needed by boards using hardware serial via a USB to Serial adaptor
     // Set up the LED to blink 
-
+    pinMode(capButtonRight,INPUT_PULLUP);
+    attachInterrupt(capButtonRight,ButtonRight,FALLING);
+    pinMode(capButtonLeft,INPUT_PULLUP);
+    attachInterrupt(capButtonLeft,ButtonLeft,FALLING);
     pinMode (pushButton, INPUT_PULLUP);
     HT1632.begin(CS, SCK, MOSI);
-
-    // Setup LED Timer
-    Timer2.setChannel1Mode(TIMER_OUTPUTCOMPARE);
-    Timer2.setPeriod(LED_RATE); // in microseconds
-    Timer2.setCompare1(1);      // overflow might be small
-
+    irrecv.enableIRIn();
     // Setup Counting Timers
-    Timer3.setChannel1Mode(TIMER_OUTPUTCOMPARE);
-    Timer4.setChannel1Mode(TIMER_OUTPUTCOMPARE);
-    Timer3.pause();
     Timer4.pause();
-    Timer3.setCount(0);
-    Timer4.setCount(0);
-    Timer3.setOverflow(30000);
-    Timer4.setOverflow(30000);
-    Timer3.setCompare1(1000);   // somewhere in the middle
-    Timer4.setCompare1(1000);   
-    Timer3.attachCompare1Interrupt(handler1);
-    Timer4.attachCompare1Interrupt(handler2);
-    Timer3.resume();
+    Timer4.setPrescaleFactor(1);
+    Timer4.setChannel1Mode(TIMER_OUTPUTCOMPARE);
+    Timer4.setOverflow(2287);
+    Timer4.setCompare1(300);
+    Timer4.attachCompare1Interrupt(IRInterrupt);
+    Timer4.setCompare2(200);
+    Timer4.attachCompare2Interrupt(handler2);
     Timer4.resume();
-
 }
 
 void loop() {
+    Serial.print("ir in ");
+    Serial.print(pincheck);
+    Serial.print(" ||| ");
+    Serial.print(irparams.rcvstate);
+    Serial.print(" ||| ");
+    Serial.print(digitalRead(pincheck));//irparams.recvpin));
 
-    // Display the running counts
-    Serial.print("Count 1: "); 
-    Serial.print(count1);
-    Serial.print("\t\tCount 2: "); 
-    Serial.println(count2);
 
-    // Run... while BUT is held, pause Count2
-    for(int i = 0; i<1000; i++) {
-        if(digitalRead(pushButton)) {
-            Timer4.pause();
-        } else {
-            Timer4.resume();
-        }
-        // delay(1);
+    if(digitalRead(pushButton)) {
+        Serial.print(" pause");
+        Timer4.pause();
+    } else {
+        Timer4.resume();
     }
-}
-
-void handler1(void) {
-    count1++;
+    Serial.print("\n");
+    delay(1);
 } 
 void handler2(void) {
-    count2++;
+    HT1632.setPixelFF (random(16), random(12));
+    HT1632.clearPixelFF (random(16), random(12));
+    HT1632.clearPixelFF (random(16), random(12));
+    HT1632.render();
 } 
