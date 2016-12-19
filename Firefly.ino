@@ -28,7 +28,7 @@ int i = 13; // start in middle
 uint8_t wdImage;
 uint8_t wdText;
 uint8_t wd;
-char disp [] = "HARAMBE WAS JUST A GORILLA";
+char disp [] = "suh dude";
 
 int16_t scollDelay = 0;
 

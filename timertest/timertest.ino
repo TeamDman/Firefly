@@ -1,7 +1,5 @@
-#include <boarddefs.h>
 #include <IRremote.h>
 #include <IRremoteInt.h>
-#include <ir_Lego_PF_BitStreamEncoder.h>
 
 #include "pins.h"
 #include "domimg.h"
@@ -40,15 +38,6 @@ void setup()
     HT1632.begin(CS, SCK, MOSI);
     irrecv.enableIRIn();
     // Setup Counting Timers
-    Timer4.pause();
-    Timer4.setPrescaleFactor(1);
-    Timer4.setChannel1Mode(TIMER_OUTPUTCOMPARE);
-    Timer4.setOverflow(2287);
-    Timer4.setCompare1(300);
-    Timer4.attachCompare1Interrupt(IRInterrupt);
-    Timer4.setCompare2(200);
-    Timer4.attachCompare2Interrupt(handler2);
-    Timer4.resume();
 }
 
 void loop() {
@@ -57,27 +46,23 @@ void loop() {
 // STATE_SPACE     4
 // STATE_STOP      5
 // STATE_OVERFLOW  6
-    Serial.print("ir in ");
-    Serial.print(irparams.recvpin);
-    Serial.print(" ||| ");
-    Serial.print(digitalRead(irparams.recvpin));
-    Serial.print(" ||| ");
-    Serial.print(irparams.rcvstate);
-    Serial.print(" ||| ");
+    // Serial.print("ir in ");
+    // Serial.print(irparams.recvpin);
+    // Serial.print(" ||| ");
+    // Serial.print(digitalRead(irparams.recvpin));
+    // Serial.print(" ||| ");
+    // Serial.print(irparams.rcvstate);
+    // Serial.print(" ||| ");
     if (irrecv.decode(&results)) {
-        Serial.print(results.value);
+        Serial.println(results.value);
         irrecv.resume();
-    } else {
-        Serial.print("no res");
     }
 
     if(digitalRead(pushButton)) {
-        Serial.print(" pause");
         Timer4.pause();
     } else {
         Timer4.resume();
     }
-    Serial.print("\n");
     delay(1);
 } 
 void handler2(void) {
