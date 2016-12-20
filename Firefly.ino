@@ -9,10 +9,12 @@
 #include <SparkFun_MMA8452Q.h>
 MMA8452Q accel;
 
-bool blockGameData[6][12];
-uint8_t blockGamePaddle=6;
-uint16_t blockGameHeight=3;
-uint8_t blockGamePosition=0;
+bool gameBlockData[6][12];
+uint8_t gameBlockPaddle=6;
+uint16_t gameBlockHeight=3;
+uint8_t gameBlockPosition=0;
+
+uint16_t gameGyroBall=0;
 
 int i = 13; // start in middle
 uint8_t wdImage;
@@ -91,7 +93,6 @@ void setup () {
 }
 
 void loop () {
-
   if (doUpdate) { 
     updateButtons();
     updateScrolling();
@@ -115,17 +116,17 @@ void loop () {
   if (machineState == buttonPhysicalInput) {
     getNextMode();
   }
-  
 }
 
 void getNextMode() {
   Serial.println("\nbutton physical\n");
   if ( displayMode == displayImage ) {
     displayMode = displayGameBlock;
+    gameBlockReset();
     doUpdate=false;
-    blockGameReset();
   } else if (displayMode == displayGameBlock ) {
     displayMode = displayGameGyro;
+    gameGyroReset();
   } else if ( displayMode == displayGameGyro) {
     displayMode = displaySparkle;
     wd = wdText;
@@ -213,41 +214,41 @@ void doModeText() {
 
 
 
-void blockGameReset() {
-  blockGamePosition=0;
-  blockGameHeight=3;
-  blockGamePaddle=6;
+void gameBlockReset() {
+  gameBlockPosition=0;
+  gameBlockHeight=3;
+  gameBlockPaddle=6;
   scrollMode=scrollRight;
   for (int x=0;x<6;x++) {
     for (int y=0;y<12;y++) {
-      blockGameData[x][y]=y<3;
+      gameBlockData[x][y]=y<3;
     }
   }         
 }
 
 void doModeGameBlock() {
-  delay(200 - blockGameHeight*17);
-  if (blockGamePosition > 11 - blockGamePaddle){
+  delay(200 - gameBlockHeight*17);
+  if (gameBlockPosition > 11 - gameBlockPaddle){
     scrollMode=scrollLeft;
-  } else if (blockGamePosition < 1){
+  } else if (gameBlockPosition < 1){
     scrollMode=scrollRight;
   }
   if (machineState == buttonLeftInput || machineState==buttonRightInput) {
-    uint8_t newPaddle = blockGamePaddle;
-    for (int x=0;x<blockGamePaddle;x++) {
-      if (x+blockGamePosition-3<0 || x+blockGamePosition-3>5 || !blockGameData[x+blockGamePosition-3][blockGameHeight-1]) {
+    uint8_t newPaddle = gameBlockPaddle;
+    for (int x=0;x<gameBlockPaddle;x++) {
+      if (x+gameBlockPosition-3<0 || x+gameBlockPosition-3>5 || !gameBlockData[x+gameBlockPosition-3][gameBlockHeight-1]) {
         newPaddle--;
       } else {
-        blockGameData[x+blockGamePosition-3][blockGameHeight]=true;
+        gameBlockData[x+gameBlockPosition-3][gameBlockHeight]=true;
       }
     }
-    blockGamePaddle=newPaddle;
-    blockGameHeight++; 
+    gameBlockPaddle=newPaddle;
+    gameBlockHeight++; 
     machineState=idle;
   }
   HT1632.clear();
-  if (blockGamePaddle<=0 || blockGameHeight >= 12) {
-    bool win = blockGamePaddle > 0;
+  if (gameBlockPaddle<=0 || gameBlockHeight >= 12) {
+    bool win = gameBlockPaddle > 0;
     for (int scroll=0;scroll<(win?48:42); scroll++) {
       HT1632.clear();
       HT1632.drawTextFF(win?"WINNER":"LOSER",16-scroll, 2, FONT_8X4, FONT_8X4_END, FONT_8X4_HEIGHT);
@@ -258,22 +259,22 @@ void doModeGameBlock() {
         break;
       }
     }
-    blockGameReset();
+    gameBlockReset();
   } else {
     for (int x=0;x<6;x++) {
       for (int y=0;y<12;y++) {
-        if (blockGameData[x][y]){ 
+        if (gameBlockData[x][y]){ 
           HT1632.setPixelFF(5+x,y);
         }
       }
-      if (x<blockGamePaddle){
-        HT1632.setPixelFF(2+x+blockGamePosition,blockGameHeight);
+      if (x<gameBlockPaddle){
+        HT1632.setPixelFF(2+x+gameBlockPosition,gameBlockHeight);
       }
     }
     if (scrollMode == scrollRight) {
-      blockGamePosition++;
+      gameBlockPosition++;
     } else if (scrollMode == scrollLeft) {
-      blockGamePosition--;
+      gameBlockPosition--;
     }
   }
 }
@@ -307,8 +308,44 @@ void doModeGyro() {
   }
 }
 
+
+void gameGyroReset() {
+  gameGyroBall=(7<<8)|6;
+}
 void doModeGameGyro() {
-  
+  if (accel.available()) {
+    accel.read();
+    calcDirection();
+    HT1632.clear();
+
+    uint8_t ballX = gameGyroBall>>8;
+    uint8_t ballY = gameGyroBall&255;
+    switch (direction) {
+      case forward:
+        ballY++;
+        break;
+      case back:
+        ballY--;
+        break;
+      case left:
+        ballX--;
+        break;
+      case right:
+        ballX++;
+        break;
+    }
+    if (ballX > 12)
+      ballX=12;
+    if (ballY > 12)
+      ballY=12;
+    if (ballX <0)
+      ballX=0;
+    if (ballY < 0)
+      ballY=0;
+    gameGyroBall=(ballX<<8)|ballY;
+    HT1632.setPixelFF(ballX,ballY);
+    delay(75);
+  }
 }
 
 void calcDirection() {
