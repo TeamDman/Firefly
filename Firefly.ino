@@ -11,12 +11,15 @@ MMA8452Q accel;
 
 bool gameBlockData[6][12];
 uint8_t gameBlockPaddle=6;
-uint16_t gameBlockHeight=3;
+uint8_t gameBlockHeight=3;
 uint8_t gameBlockPosition=0;
 
-uint16_t gameGyroBall=0;
+int8_t gameSnake[192][2];
+int8_t gameSnakeOld[192][2];
+uint8_t gameSnakeFruit[2];
+uint8_t gameSnakeLength;
 
-int i = 13; // start in middle
+uint8_t i = 13; // start in middle
 uint8_t wdImage;
 uint8_t wdText;
 uint8_t wd;
@@ -55,7 +58,7 @@ enum displayModes {
   displaySparkle,
   displayGyro,
   displayGameBlock,
-  displayGameGyro
+  displayGameSnake
 }   displayMode;
 
 void buttonPhysical(void) {
@@ -100,8 +103,8 @@ void loop () {
 
   if (displayMode==displayGameBlock) {
     doModeGameBlock();
-  } else if ( displayMode == displayGameGyro ) {
-    doModeGameGyro();
+  } else if ( displayMode == displayGameSnake ) {
+    doModegameSnake();
   } else if ( displayMode == displaySparkle ) {
     doModeSparkle();
   } else if ( displayMode == displayGyro ) {
@@ -125,9 +128,9 @@ void getNextMode() {
     gameBlockReset();
     doUpdate=false;
   } else if (displayMode == displayGameBlock ) {
-    displayMode = displayGameGyro;
-    gameGyroReset();
-  } else if ( displayMode == displayGameGyro) {
+    displayMode = displayGameSnake;
+    gameSnakeReset();
+  } else if ( displayMode == displayGameSnake) {
     displayMode = displaySparkle;
     wd = wdText;
   } else if ( displayMode == displaySparkle  ) {
@@ -261,8 +264,8 @@ void doModeGameBlock() {
     }
     gameBlockReset();
   } else {
-    for (int x=0;x<6;x++) {
-      for (int y=0;y<12;y++) {
+    for (uint8_t x=0;x<6;x++) {
+      for (uint8_t y=0;y<12;y++) {
         if (gameBlockData[x][y]){ 
           HT1632.setPixelFF(5+x,y);
         }
@@ -309,41 +312,64 @@ void doModeGyro() {
 }
 
 
-void gameGyroReset() {
-  gameGyroBall=(7<<8)|6;
+void gameSnakeReset() {
+  for (uint8_t i=0;i<192;i++) {
+    gameSnake[i][0]=-1;
+    gameSnake[i][1]=-1;
+  }
+  gameSnake[0][0]=7;
+  gameSnake[0][1]=6;
+  gameSnakeGenFruit();
+  gameSnakeLength=1;
 }
-void doModeGameGyro() {
+
+void gameSnakeGenFruit() {
+  gameSnakeFruit[0]=random(0,15);
+  gameSnakeFruit[1]=random(0,11);
+}
+
+void doModegameSnake() {
   if (accel.available()) {
     accel.read();
     calcDirection();
     HT1632.clear();
 
-    uint8_t ballX = gameGyroBall>>8;
-    uint8_t ballY = gameGyroBall&255;
+    for (uint8_t i=0;i<gameSnakeLength;i++) {
+      gameSnakeOld[i][0]=gameSnake[i][0];
+      gameSnakeOld[i][1]=gameSnake[i][1];
+    }
+
     switch (direction) {
       case forward:
-        ballY++;
+        gameSnake[0][1]++;
         break;
       case back:
-        ballY--;
+        gameSnake[0][1]--;
         break;
       case left:
-        ballX--;
+        gameSnake[0][0]--;
         break;
       case right:
-        ballX++;
+        gameSnake[0][0]++;
         break;
     }
-    if (ballX > 12)
-      ballX=12;
-    if (ballY > 12)
-      ballY=12;
-    if (ballX <0)
-      ballX=0;
-    if (ballY < 0)
-      ballY=0;
-    gameGyroBall=(ballX<<8)|ballY;
-    HT1632.setPixelFF(ballX,ballY);
+    if (gameSnake[0][0] < 0 || gameSnake[0][1] < 0)
+      gameSnakeReset();
+    if (gameSnake[0][0] > 15 || gameSnake[0][1] > 11)
+      gameSnakeReset();
+    if (gameSnake[0][0] == gameSnakeFruit[0] && gameSnake[0][1] == gameSnakeFruit[1]) {
+      gameSnakeGenFruit();
+      gameSnakeLength++;
+    }
+
+    for (uint8_t i=1;i<gameSnakeLength;i++) {
+      gameSnake[i][0] = gameSnakeOld[i-1][0];
+      gameSnake[i][1] = gameSnakeOld[i-1][1];
+    }
+    for (uint8_t i=0;i<gameSnakeLength;i++) {
+      HT1632.setPixelFF(gameSnake[i][0],gameSnake[i][1]);
+    }
+    HT1632.setPixelFF(gameSnakeFruit[0],gameSnakeFruit[1]);
     delay(75);
   }
 }
