@@ -4,30 +4,10 @@
 #include <HT1632.h>
 #include <font_8x4.h>
 #include <images.h>
+#include <cmath>
 
 #include <Wire.h>
 #include <SparkFun_MMA8452Q.h>
-MMA8452Q accel;
-
-bool gameBlockData[6][12];
-uint8_t gameBlockPaddle=6;
-uint8_t gameBlockHeight=3;
-uint8_t gameBlockPosition=0;
-
-int8_t gameSnake[192][2];
-int8_t gameSnakeOld[192][2];
-uint8_t gameSnakeFruit[2];
-uint8_t gameSnakeLength;
-
-uint8_t i = 13; // start in middle
-uint8_t wdImage;
-uint8_t wdText;
-uint8_t wd;
-char disp [] = "suh dude";
-
-bool doUpdate = true;
-int16_t scollDelay = 0;
-#define threshold 0.004
 
 enum directions {
   none,
@@ -35,7 +15,7 @@ enum directions {
   left,
   right,
   back
-}   direction;
+}   direction, gameSnakeLast;
 
 enum machineStates { 
   idle, 
@@ -60,6 +40,29 @@ enum displayModes {
   displayGameBlock,
   displayGameSnake
 }   displayMode;
+
+
+MMA8452Q accel;
+
+bool gameBlockData[6][12];
+uint8_t gameBlockPaddle=6;
+uint8_t gameBlockHeight=3;
+uint8_t gameBlockPosition=0;
+
+int8_t gameSnake[192][2];
+int8_t gameSnakeOld[192][2];
+uint8_t gameSnakeFruit[2];
+uint8_t gameSnakeLength;
+
+uint8_t i = 13; // start in middle
+uint8_t wdImage;
+uint8_t wdText;
+uint8_t wd;
+char disp [] = "suh dude";
+
+bool doUpdate = true;
+int16_t scollDelay = 0;
+#define threshold 0.01
 
 void buttonPhysical(void) {
   machineState = buttonPhysicalInput;
@@ -313,27 +316,35 @@ void doModeGyro() {
 
 
 void gameSnakeReset() {
+  gameSnakeGenFruit();
   for (uint8_t i=0;i<192;i++) {
     gameSnake[i][0]=-1;
     gameSnake[i][1]=-1;
   }
   gameSnake[0][0]=7;
   gameSnake[0][1]=6;
-  gameSnakeGenFruit();
   gameSnakeLength=1;
+  gameSnakeLast=none;
 }
 
 void gameSnakeGenFruit() {
-  gameSnakeFruit[0]=random(0,15);
-  gameSnakeFruit[1]=random(0,11);
+  gameSnakeFruit[0]=random(1,14);
+  gameSnakeFruit[1]=random(1,10);
 }
 
 void doModegameSnake() {
   if (accel.available()) {
     accel.read();
     calcDirection();
-    HT1632.clear();
 
+    if (direction == none)
+      return;
+    if ((int)direction==5-(int)gameSnakeLast)
+      direction=gameSnakeLast;
+    gameSnakeLast=direction;
+
+    HT1632.clear();
+    
     for (uint8_t i=0;i<gameSnakeLength;i++) {
       gameSnakeOld[i][0]=gameSnake[i][0];
       gameSnakeOld[i][1]=gameSnake[i][1];
@@ -353,6 +364,7 @@ void doModegameSnake() {
         gameSnake[0][0]++;
         break;
     }
+
     if (gameSnake[0][0] < 0 || gameSnake[0][1] < 0)
       gameSnakeReset();
     if (gameSnake[0][0] > 15 || gameSnake[0][1] > 11)
@@ -366,13 +378,13 @@ void doModegameSnake() {
       gameSnake[i][0] = gameSnakeOld[i-1][0];
       gameSnake[i][1] = gameSnakeOld[i-1][1];
     }
-    for (uint8_t i=0;i<gameSnakeLength;i++) {
+    for (uint8_t i=0;i<gameSnakeLength;i++) 
       HT1632.setPixelFF(gameSnake[i][0],gameSnake[i][1]);
-    }
     HT1632.setPixelFF(gameSnakeFruit[0],gameSnakeFruit[1]);
-    delay(75);
+    delay(7000/fmax(abs(accel.cx*1000),abs(accel.cy*1000)));
   }
 }
+
 
 void calcDirection() {
   direction=none;
