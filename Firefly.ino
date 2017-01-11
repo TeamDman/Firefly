@@ -58,7 +58,7 @@ uint8_t i = 13; // start in middle
 uint8_t wdImage;
 uint8_t wdText;
 uint8_t wd;
-char disp [] = "suh dude";
+char disp [] = "DOMINIC PHILLIPS";
 
 bool doUpdate = true;
 int16_t scollDelay = 0;
