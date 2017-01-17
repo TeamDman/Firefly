@@ -40,7 +40,8 @@ enum displayModes {
 	displayGameSnake,
 	displayThanksDom,
 	displayThanksDesgn,
-	displayThanksCarl
+	displayThanksCarl,
+	displayGLKB
 }   displayMode;
 
 
@@ -64,7 +65,8 @@ const char* messages[] =
 {
     (char*)("DOMINIC PHILLIPS"),
     (char*)("THANKS DESIGN 1ST"),
-    (char*)("THE CARL ARM")
+    (char*)("THE CARL ARM"),
+    (char*)("GOOD LUCK K.B.")
 };
 uint8_t msgindex = 0;
 
@@ -163,6 +165,9 @@ void getNextMode() {
 		displayMode = displayThanksCarl;
 		msgindex=2;
 	} else if ( displayMode == displayThanksCarl ) {
+		displayMode = displayGLKB;
+		msgindex=3;
+	} else if ( displayMode == displayGLKB ) {
 		displayMode = displayGameBlock;
 		wd = wdImage;
 	}
